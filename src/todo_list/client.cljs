@@ -15,9 +15,12 @@
 
 (def todo-list (r/atom initial-state))
 (defn add-todo [todo]
-  (let [new-todos (-> @todo-list
+  (let [todo-length (-> @todo-list
+                        :todos
+                        count)
+        new-todos (-> @todo-list
                       :todos
-                      (conj {:title todo}))]
+                      (conj {:title todo :id todo-length}))]
     (swap! todo-list #(assoc % :todos new-todos))))
 (defn get-todos []
   (:todos @todo-list))
@@ -25,7 +28,8 @@
 (defn lister [items]
   [:ul
    (for [item items]
-     ^{:key item} [:li (:title item)])])
+     ^{:key (:id item)} [:li
+                         (:title item)])])
 
 (defn input []
   (let [value (r/atom "")]
