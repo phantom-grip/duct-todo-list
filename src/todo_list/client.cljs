@@ -10,18 +10,19 @@
 ;; TODO: use bulma for styling
 
 (def filters [:all :completed :active])
-(def initial-state {:filter :all
-                    :todos  []})
+(def initial-state {:filter  :all
+                    :todos   []
+                    :next-id 0})
 
 (def todo-list (r/atom initial-state))
 (defn add-todo [todo]
-  (let [todo-length (-> @todo-list
-                        :todos
-                        count)
+  (let [id (:next-id @todo-list)
         new-todos (-> @todo-list
                       :todos
-                      (conj {:title todo :id todo-length}))]
-    (swap! todo-list #(assoc % :todos new-todos))))
+                      (conj {:title todo :id id}))]
+    (swap! todo-list #(-> %
+                          (assoc :todos new-todos)
+                          (update :next-id inc)))))
 (defn get-todos []
   (:todos @todo-list))
 
