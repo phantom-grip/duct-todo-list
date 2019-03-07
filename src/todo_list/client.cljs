@@ -1,7 +1,6 @@
 (ns todo-list.client
   (:require [reagent.core :as r]))
 
-;; TODO: add ability to check/uncheck
 ;; TODO: add filters: all, active, completed
 ;; TODO: add counter of elements left
 ;; TODO: add ability to clear completed elements
@@ -19,7 +18,7 @@
   (let [id (:next-id @todo-list)
         new-todos (-> @todo-list
                       :todos
-                      (conj {:title todo :id id}))]
+                      (conj {:title todo :id id :checked false}))]
     (swap! todo-list #(-> %
                           (assoc :todos new-todos)
                           (update :next-id inc)))))
@@ -29,6 +28,13 @@
                        (filter #(not= id (:id %))))]
     (swap! todo-list #(assoc % :todos new-todos))))
 
+(defn toggle-todo [id]
+  (let [new-todos (->> (:todos @todo-list)
+                       (map #(if (= id (:id %))
+                               (update % :checked not)
+                               %)))]
+    (swap! todo-list #(assoc % :todos new-todos))))
+
 (defn get-todos []
   (:todos @todo-list))
 
@@ -36,6 +42,12 @@
   [:ul
    (for [item items]
      ^{:key (:id item)} [:li
+                         {:style (if (:checked item)
+                                   {:text-decoration "line-through"}
+                                   {})}
+                         [:input {:type     "checkbox"
+                                  :checked  (:checked item)
+                                  :on-click #(toggle-todo (:id item))}]
                          (:title item)
                          [:button
                           {:on-click #(delete-todo (:id item))}
