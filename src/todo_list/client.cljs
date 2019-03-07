@@ -1,7 +1,6 @@
 (ns todo-list.client
   (:require [reagent.core :as r]))
 
-;; TODO: add ability to delete
 ;; TODO: add ability to check/uncheck
 ;; TODO: add filters: all, active, completed
 ;; TODO: add counter of elements left
@@ -15,6 +14,7 @@
                     :next-id 0})
 
 (def todo-list (r/atom initial-state))
+
 (defn add-todo [todo]
   (let [id (:next-id @todo-list)
         new-todos (-> @todo-list
@@ -23,6 +23,12 @@
     (swap! todo-list #(-> %
                           (assoc :todos new-todos)
                           (update :next-id inc)))))
+
+(defn delete-todo [id]
+  (let [new-todos (->> (:todos @todo-list)
+                       (filter #(not= id (:id %))))]
+    (swap! todo-list #(assoc % :todos new-todos))))
+
 (defn get-todos []
   (:todos @todo-list))
 
@@ -30,7 +36,10 @@
   [:ul
    (for [item items]
      ^{:key (:id item)} [:li
-                         (:title item)])])
+                         (:title item)
+                         [:button
+                          {:on-click #(delete-todo (:id item))}
+                          "Delete"]])])
 
 (defn input []
   (let [value (r/atom "")]
