@@ -1,11 +1,12 @@
 (ns todo-list.client
   (:require [reagent.core :as r]))
 
-;; TODO: add filters: all, active, completed
 ;; TODO: add counter of elements left
 ;; TODO: add ability to clear completed elements
 ;; TODO: add check/uncheck all elements
 ;; TODO: use bulma for styling
+
+(enable-console-print!)
 
 (def filters [:all :completed :active])
 (def initial-state {:filter  :all
@@ -36,7 +37,18 @@
     (swap! todo-list #(assoc % :todos new-todos))))
 
 (defn get-todos []
-  (:todos @todo-list))
+  (let [f (:filter @todo-list)
+        todos (:todos @todo-list)]
+    (case f
+      :all
+      todos
+      :completed
+      (filter #(= true (:checked %)) todos)
+      :active
+      (filter #(= false (:checked %)) todos))))
+
+(defn change-filter [new-filter]
+  (do (swap! todo-list #(assoc % :filter new-filter))))
 
 (defn lister [items]
   [:ul
@@ -70,6 +82,10 @@
   (fn []
     [:div
      [:h1 "My todos:"]
+     [:ul
+      [:li [:button {:on-click #(change-filter :all)} "Show All"]]
+      [:li [:button {:on-click #(change-filter :active)} "Show Active"]]
+      [:li [:button {:on-click #(change-filter :completed)} "Show Completed"]]]
      [input]
      [lister (get-todos)]]))
 
