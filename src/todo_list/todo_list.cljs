@@ -33,6 +33,10 @@
   (->> (get-completed-todos todo-list)
        count))
 
+(defn count-all-todos [todo-list]
+  (->> (get-all-todos todo-list)
+       (count)))
+
 (defn get-filter [todo-list]
   (:filter todo-list))
 

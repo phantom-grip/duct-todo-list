@@ -1,148 +1,94 @@
 (ns todo-list.client
-  (:require [reagent.core :as r]))
+  (:require [reagent.core :as r]
+            [todo-list.todo :as todo]
+            [todo-list.todo-list :as tdl]))
 
 ;; TODO: use bulma for styling
 
 (enable-console-print!)
 
-(def filters [:all :completed :active])
-(def initial-state {:filter  :all
-                    :todos   []
-                    :next-id 0})
+(defn filters [todo-list]
+  (let [change-filter (fn [f]
+                        (swap! todo-list #(tdl/update-filter % f)))]
+    [:ul
+     [:li [:button {:on-click #(change-filter :all)} "Show All"]]
+     [:li [:button {:on-click #(change-filter :active)} "Show Active"]]
+     [:li [:button {:on-click #(change-filter :completed)} "Show Completed"]]]))
 
-(def todo-list (r/atom initial-state))
+(defn lister [todo-list]
+  (let [items (tdl/get-todos @todo-list)
+        toggle-todo (fn [item]
+                      (swap! todo-list #(tdl/toggle-todo % item)))
+        delete-todo (fn [item]
+                      (swap! todo-list #(tdl/delete-todo % item)))]
+    [:ul
+     (for [item items]
+       ^{:key (todo/get-id item)} [:li
+                                   {:style (if (todo/completed? item)
+                                             {:text-decoration "line-through"}
+                                             {})}
+                                   [:input {:type      "checkbox"
+                                            :checked   (todo/completed? item)
+                                            :on-change #(toggle-todo item)}]
+                                   (todo/get-description item)
+                                   [:button
+                                    {:on-click #(delete-todo item)}
+                                    "Delete"]])]))
 
-(defn add-todo [todo]
-  (let [id (:next-id @todo-list)
-        new-todos (-> @todo-list
-                      :todos
-                      (conj {:title todo :id id :checked false}))]
-    (swap! todo-list #(-> %
-                          (assoc :todos new-todos)
-                          (update :next-id inc)))))
-
-(defn delete-todo [id]
-  (let [new-todos (->> (:todos @todo-list)
-                       (filter #(not= id (:id %))))]
-    (swap! todo-list #(assoc % :todos new-todos))))
-
-(defn toggle-todo [id]
-  (let [new-todos (->> (:todos @todo-list)
-                       (map #(if (= id (:id %))
-                               (update % :checked not)
-                               %)))]
-    (swap! todo-list #(assoc % :todos new-todos))))
-
-(defn get-todos []
-  (let [f (:filter @todo-list)
-        todos (:todos @todo-list)]
-    (case f
-      :all
-      todos
-      :completed
-      (filter #(= true (:checked %)) todos)
-      :active
-      (filter #(= false (:checked %)) todos))))
-
-(defn count-elements-left []
-  (->> (:todos @todo-list)
-       (filter #(false? (:checked %)))
-       count))
-
-(defn count-completed-elements []
-  (->> (:todos @todo-list)
-       (filter #(true? (:checked %)))
-       count))
-
-(defn change-filter [new-filter]
-  (do (swap! todo-list #(assoc % :filter new-filter))))
-
-(defn remove-completed-elements []
-  (let [todos-without-completed (->> (:todos @todo-list)
-                                     (filter #(false? (:checked %))))]
-    (swap! todo-list #(assoc % :todos todos-without-completed))))
-
-(defn is-all-completed []
-  (->> (:todos @todo-list)
-       (every? #(true? (:checked %)))))
-
-(defn complete-all-todos []
-  (let [todos-completed (->> (:todos @todo-list)
-                             (map #(assoc % :checked true)))
-        _ (println "here")]
-    (swap! todo-list #(assoc % :todos todos-completed))))
-
-(defn uncomplete-all-todos []
-  (let [todos-uncompleted (->> (:todos @todo-list)
-                               (map #(assoc % :checked false)))]
-    (swap! todo-list #(assoc % :todos todos-uncompleted))))
-
-(defn count-todos []
-  (->> (:todos @todo-list)
-       count))
-
-(defn complete-uncomplete-all-btn []
-  [:button
-   {:on-click (if (is-all-completed)
-                uncomplete-all-todos
-                complete-all-todos)
-    :disabled (= 0 (count-todos))}
-   (if (is-all-completed)
-     "Uncomplete all"
-     "Complete all")])
-
-(defn lister [items]
-  [:ul
-   (for [item items]
-     ^{:key (:id item)} [:li
-                         {:style (if (:checked item)
-                                   {:text-decoration "line-through"}
-                                   {})}
-                         [:input {:type     "checkbox"
-                                  :checked  (:checked item)
-                                  :on-click #(toggle-todo (:id item))}]
-                         (:title item)
-                         [:button
-                          {:on-click #(delete-todo (:id item))}
-                          "Delete"]])])
-
-
-(defn input []
-  (let [value (r/atom "")]
+(defn input [todo-list]
+  (let [value (r/atom "")
+        handle-click #(reset! value (-> % .-target .-value))
+        handle-submit (fn [e]
+                        (do
+                          (.preventDefault e)
+                          (swap! todo-list #(->> (todo/create @value)
+                                                 (tdl/add-todo %)))
+                          (reset! value "")))]
     (fn []
       [:form
-       {:on-submit (fn [e]
-                     (do
-                       (.preventDefault e)
-                       (add-todo @value)
-                       (reset! value "")))}
+       {:on-submit handle-submit}
        [:input {:type      "text"
                 :value     @value
-                :on-change #(reset! value (-> % .-target .-value))}]])))
+                :on-change handle-click}]])))
 
-(defn elements-left []
-  [:div (str "Elements left: " (count-elements-left))])
+(defn elements-left [todo-list]
+  [:div (str "Elements left: " (tdl/count-active-todos @todo-list))])
 
-(defn remove-completed-btn []
-  [:button
-   {:on-click remove-completed-elements
-    :disabled (= 0 (count-completed-elements))}
-   "Remove all completed elements"])
+(defn remove-completed-btn [todo-list]
+  (let [handle-click (fn []
+                       (swap! todo-list #(tdl/remove-all-completed-todos %)))
+        disabled? (zero? (tdl/count-completed-todos @todo-list))]
+    [:button
+     {:on-click handle-click
+      :disabled disabled?}
+     "Remove all completed elements"]))
 
-(defn home-page []
-  (fn []
-    [:div
-     [:h1 "My todos:"]
-     [:ul
-      [:li [:button {:on-click #(change-filter :all)} "Show All"]]
-      [:li [:button {:on-click #(change-filter :active)} "Show Active"]]
-      [:li [:button {:on-click #(change-filter :completed)} "Show Completed"]]]
-     [input]
-     [complete-uncomplete-all-btn]
-     [elements-left]
-     [lister (get-todos)]
-     [remove-completed-btn]]))
+(defn complete-uncomplete-button [todo-list]
+  (let [handle-click (fn []
+                       (if (tdl/all-todos-completed? @todo-list)
+                         (swap! todo-list #(tdl/uncomplete-all %))
+                         (swap! todo-list #(tdl/complete-all %))))
+        btn-text (if (tdl/all-todos-completed? @todo-list)
+                   "Uncomplete all"
+                   "Complete all")
+        disabled? (zero? (tdl/count-all-todos @todo-list))]
+    [:button
+     {:on-click handle-click
+      :disabled disabled?}
+     btn-text]))
 
-(r/render [home-page]
+(def tdl-atom (r/atom (tdl/create)))
+
+(defn page []
+  (let []
+    [:<>
+     [filters tdl-atom]
+     [elements-left tdl-atom]
+     [input tdl-atom]
+     [complete-uncomplete-button tdl-atom]
+     [remove-completed-btn tdl-atom]
+     [lister tdl-atom]]))
+
+(r/render [page]
           (-> js/document
               (.getElementById "app")))

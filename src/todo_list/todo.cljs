@@ -22,7 +22,7 @@
   (assoc todo :completed true))
 
 (defn uncomplete [todo]
-  (assoc todo :complete false))
+  (assoc todo :completed false))
 
 (defn completed? [todo]
   (:completed todo))
