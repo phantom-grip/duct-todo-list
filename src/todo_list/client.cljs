@@ -1,7 +1,6 @@
 (ns todo-list.client
   (:require [reagent.core :as r]))
 
-;; TODO: add ability to clear completed elements
 ;; TODO: add check/uncheck all elements
 ;; TODO: use bulma for styling
 
@@ -51,8 +50,18 @@
        (filter #(false? (:checked %)))
        count))
 
+(defn count-completed-elements []
+  (->> (:todos @todo-list)
+       (filter #(true? (:checked %)))
+       count))
+
 (defn change-filter [new-filter]
   (do (swap! todo-list #(assoc % :filter new-filter))))
+
+(defn remove-completed-elements []
+  (let [todos-without-completed (->> (:todos @todo-list)
+                                     (filter #(false? (:checked %))))]
+    (swap! todo-list #(assoc % :todos todos-without-completed))))
 
 (defn lister [items]
   [:ul
@@ -85,6 +94,12 @@
 (defn elements-left []
   [:div (str "Elements left: " (count-elements-left))])
 
+(defn remove-completed-btn []
+  [:button
+   {:on-click remove-completed-elements
+    :disabled (= 0 (count-completed-elements))}
+   "Remove all completed elements"])
+
 (defn home-page []
   (fn []
     [:div
@@ -95,7 +110,8 @@
       [:li [:button {:on-click #(change-filter :completed)} "Show Completed"]]]
      [input]
      [elements-left]
-     [lister (get-todos)]]))
+     [lister (get-todos)]
+     [remove-completed-btn]]))
 
 (r/render [home-page]
           (-> js/document
