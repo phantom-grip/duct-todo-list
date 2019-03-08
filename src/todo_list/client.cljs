@@ -77,10 +77,8 @@
       :disabled disabled?}
      btn-text]))
 
-(def tdl-atom (r/atom (tdl/create)))
-
 (defn page []
-  (let []
+  (let [tdl-atom (r/atom (tdl/create))]
     [:<>
      [filters tdl-atom]
      [elements-left tdl-atom]
