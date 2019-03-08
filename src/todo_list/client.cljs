@@ -1,7 +1,6 @@
 (ns todo-list.client
   (:require [reagent.core :as r]))
 
-;; TODO: add check/uncheck all elements
 ;; TODO: use bulma for styling
 
 (enable-console-print!)
@@ -63,6 +62,35 @@
                                      (filter #(false? (:checked %))))]
     (swap! todo-list #(assoc % :todos todos-without-completed))))
 
+(defn is-all-completed []
+  (->> (:todos @todo-list)
+       (every? #(true? (:checked %)))))
+
+(defn complete-all-todos []
+  (let [todos-completed (->> (:todos @todo-list)
+                             (map #(assoc % :checked true)))
+        _ (println "here")]
+    (swap! todo-list #(assoc % :todos todos-completed))))
+
+(defn uncomplete-all-todos []
+  (let [todos-uncompleted (->> (:todos @todo-list)
+                               (map #(assoc % :checked false)))]
+    (swap! todo-list #(assoc % :todos todos-uncompleted))))
+
+(defn count-todos []
+  (->> (:todos @todo-list)
+       count))
+
+(defn complete-uncomplete-all-btn []
+  [:button
+   {:on-click (if (is-all-completed)
+                uncomplete-all-todos
+                complete-all-todos)
+    :disabled (= 0 (count-todos))}
+   (if (is-all-completed)
+     "Uncomplete all"
+     "Complete all")])
+
 (defn lister [items]
   [:ul
    (for [item items]
@@ -77,6 +105,7 @@
                          [:button
                           {:on-click #(delete-todo (:id item))}
                           "Delete"]])])
+
 
 (defn input []
   (let [value (r/atom "")]
@@ -109,6 +138,7 @@
       [:li [:button {:on-click #(change-filter :active)} "Show Active"]]
       [:li [:button {:on-click #(change-filter :completed)} "Show Completed"]]]
      [input]
+     [complete-uncomplete-all-btn]
      [elements-left]
      [lister (get-todos)]
      [remove-completed-btn]]))
