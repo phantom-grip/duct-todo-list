@@ -1,7 +1,6 @@
 (ns todo-list.client
   (:require [reagent.core :as r]))
 
-;; TODO: add counter of elements left
 ;; TODO: add ability to clear completed elements
 ;; TODO: add check/uncheck all elements
 ;; TODO: use bulma for styling
@@ -47,6 +46,11 @@
       :active
       (filter #(= false (:checked %)) todos))))
 
+(defn count-elements-left []
+  (->> (:todos @todo-list)
+       (filter #(false? (:checked %)))
+       count))
+
 (defn change-filter [new-filter]
   (do (swap! todo-list #(assoc % :filter new-filter))))
 
@@ -78,6 +82,9 @@
                 :value     @value
                 :on-change #(reset! value (-> % .-target .-value))}]])))
 
+(defn elements-left []
+  [:div (str "Elements left: " (count-elements-left))])
+
 (defn home-page []
   (fn []
     [:div
@@ -87,6 +94,7 @@
       [:li [:button {:on-click #(change-filter :active)} "Show Active"]]
       [:li [:button {:on-click #(change-filter :completed)} "Show Completed"]]]
      [input]
+     [elements-left]
      [lister (get-todos)]]))
 
 (r/render [home-page]
