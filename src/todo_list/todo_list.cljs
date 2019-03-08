@@ -25,6 +25,14 @@
   (->> (get-all-todos todo-list)
        (filter t/active?)))
 
+(defn count-active-todos [todo-list]
+  (->> (get-active-todos todo-list)
+       count))
+
+(defn count-completed-todos [todo-list]
+  (->> (get-completed-todos todo-list)
+       count))
+
 (defn get-filter [todo-list]
   (:filter todo-list))
 

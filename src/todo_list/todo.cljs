@@ -33,5 +33,5 @@
 (defn get-id [todo]
   (:id todo))
 
-(defn check-import []
-  [:div "sample test"])
+(defn get-description [todo]
+  (:description todo))
